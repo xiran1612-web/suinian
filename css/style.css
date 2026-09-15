@@ -1,4 +1,4 @@
-/* style.css — 碎念：温暖、干净、像一本往下长的册子 */
+/* style.css — 碎念：温暖、干净、像一本往下长的册子（手机优先） */
 :root {
   --bg: #fdfcfa;
   --ink: #2b2b2b;
@@ -6,6 +6,7 @@
   --card: #ffffff;
   --line: #efeae1;
   --accent: #c07a4b;
+  --accent-soft: #f4e8dc;
 }
 
 * { box-sizing: border-box; }
@@ -22,6 +23,8 @@ body {
   line-height: 1.7;
   -webkit-font-smoothing: antialiased;
 }
+
+body.no-scroll { overflow: hidden; }
 
 .top {
   padding: 28px 20px 12px;
@@ -41,14 +44,12 @@ body {
 }
 
 .flow {
-  padding: 0 16px 48px;
+  padding: 0 16px 96px;
   max-width: 640px;
   margin: 0 auto;
 }
 
-.day {
-  margin-top: 8px;
-}
+.day { margin-top: 8px; }
 
 .day-label {
   font-size: 13px;
@@ -64,6 +65,7 @@ body {
   padding: 14px 16px;
   margin-bottom: 10px;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  cursor: pointer;
 }
 
 .item-text {
@@ -72,3 +74,242 @@ body {
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+.item-time {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: right;
+}
+
+/* 已保存的待办展示 */
+.item-todos {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+}
+
+.item-todo {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 15px;
+  padding: 3px 0;
+}
+
+.item-todo input[type="checkbox"] {
+  margin-top: 4px;
+  flex: none;
+}
+
+.item-todo.done span {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.empty {
+  padding: 60px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.empty p { margin: 4px 0; }
+
+/* 悬浮写作按钮 */
+.fab {
+  position: fixed;
+  right: 18px;
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 30px;
+  line-height: 1;
+  box-shadow: 0 4px 14px rgba(192, 122, 75, 0.35);
+  cursor: pointer;
+  z-index: 20;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fab:active { transform: scale(0.94); }
+
+/* 全屏编辑面板 */
+.editor {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: var(--bg);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor.hidden { display: none; }
+
+.editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  padding-top: calc(12px + env(safe-area-inset-top));
+  border-bottom: 1px solid var(--line);
+}
+
+.editor-date {
+  font-size: 15px;
+  color: var(--ink);
+  border: none;
+  background: transparent;
+  -webkit-appearance: none;
+}
+
+.editor-close {
+  font-size: 15px;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.editor-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  max-width: 640px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.editor-text {
+  width: 100%;
+  min-height: 180px;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: inherit;
+  font-size: 17px;
+  line-height: 1.8;
+  color: var(--ink);
+  background: transparent;
+}
+
+.editor-text::placeholder { color: var(--muted); }
+
+/* 待办编辑区 */
+.todo-block { margin-top: 16px; }
+
+.todo-title {
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.todo-list { margin-bottom: 8px; }
+
+.todo-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0;
+}
+
+.todo-check { flex: none; }
+
+.todo-text {
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--card);
+  min-width: 0;
+}
+
+.todo-move,
+.todo-del {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.todo-move:disabled { opacity: 0.35; cursor: default; }
+
+.todo-del { background: #f6e4e0; color: #b0574a; }
+
+.todo-add {
+  display: flex;
+  gap: 8px;
+}
+
+.todo-input {
+  flex: 1;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--ink);
+  background: var(--card);
+}
+
+.todo-add-btn {
+  flex: none;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.editor-foot {
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.editor-save {
+  flex: 1;
+  padding: 12px 0;
+  border: none;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.editor-delete {
+  flex: none;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 10px;
+  background: #f6e4e0;
+  color: #b0574a;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.editor-delete.hidden { display: none; }

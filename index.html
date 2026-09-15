@@ -13,6 +13,31 @@
     <p class="count" id="count"></p>
   </header>
   <main id="flow" class="flow"></main>
+
+  <button id="fab" class="fab" aria-label="写一条">＋</button>
+
+  <div id="editor" class="editor hidden">
+    <div class="editor-head">
+      <input type="date" id="editor-date" class="editor-date">
+      <button id="editor-close" class="editor-close" aria-label="取消">取消</button>
+    </div>
+    <div class="editor-body">
+      <textarea id="editor-text" class="editor-text" placeholder="写点想法，想写几段写几段…"></textarea>
+      <div class="todo-block">
+        <div class="todo-title">待办</div>
+        <div id="todo-list" class="todo-list"></div>
+        <div class="todo-add">
+          <input id="todo-input" class="todo-input" placeholder="加一条待办…">
+          <button id="todo-add-btn" class="todo-add-btn">加</button>
+        </div>
+      </div>
+    </div>
+    <div class="editor-foot">
+      <button id="editor-delete" class="editor-delete hidden">删除</button>
+      <button id="editor-save" class="editor-save">保存</button>
+    </div>
+  </div>
+
   <script src="js/data.js"></script>
   <script src="js/app.js"></script>
 </body>
