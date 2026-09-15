@@ -1,10 +1,10 @@
-/* style.css — 碎念：温暖、干净、像一本往下长的册子（手机优先） */
+/* style.css — 碎念：温暖、干净、像一本往下长的册子（手机优先，每天一页可翻） */
 :root {
-  --bg: #fdfcfa;
+  --bg: #f7f3ec;
   --ink: #2b2b2b;
   --muted: #9a958c;
-  --card: #ffffff;
-  --line: #efeae1;
+  --card: #fffdf8;
+  --line: #e8e0d2;
   --accent: #c07a4b;
   --accent-soft: #f4e8dc;
 }
@@ -27,7 +27,9 @@ body {
 body.no-scroll { overflow: hidden; }
 
 .top {
-  padding: 28px 20px 12px;
+  padding: 28px 20px 8px;
+  max-width: 640px;
+  margin: 0 auto;
 }
 
 .top h1 {
@@ -43,30 +45,95 @@ body.no-scroll { overflow: hidden; }
   color: var(--muted);
 }
 
-.flow {
-  padding: 0 16px 96px;
+/* ---------- 翻页区 ---------- */
+
+.stage {
   max-width: 640px;
   margin: 0 auto;
+  padding: 8px 16px 0;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-.day { margin-top: 8px; }
-
-.day-label {
-  font-size: 13px;
-  color: var(--muted);
-  padding: 14px 4px 8px;
-  letter-spacing: 0.5px;
+.pages {
+  display: grid;
+  perspective: 1800px;
 }
 
-.item {
+.page {
+  grid-area: 1 / 1;
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-bottom: 10px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  border-radius: 14px;
+  padding: 22px 18px 28px;
+  min-height: 52vh;
+  max-height: calc(100vh - 230px);
+  overflow-y: auto;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03), 0 12px 30px rgba(0, 0, 0, 0.06);
+  transform-origin: left center;
+  transform: rotateY(0deg);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+  visibility: hidden;
+  z-index: 0;
+}
+
+.page.active {
+  visibility: visible;
+  z-index: 2;
+}
+
+.page.below {
+  visibility: visible;
+  z-index: 1;
+}
+
+/* 往前翻（更早）：当前页向左翻走，露出下面一页 */
+.page.turn-out {
+  visibility: visible;
+  z-index: 2;
+  transition: transform 0.45s cubic-bezier(0.35, 0.1, 0.25, 1), opacity 0.45s ease;
+  transform: rotateY(-100deg);
+  opacity: 0.3;
+}
+
+/* 往回翻（更新）：新页从左边翻回来盖住旧页 */
+.page.turn-in-from {
+  visibility: visible;
+  z-index: 2;
+  transform: rotateY(-100deg);
+  opacity: 0.6;
+  transition: none;
+}
+
+.page.turn-in {
+  visibility: visible;
+  z-index: 2;
+  transition: transform 0.45s cubic-bezier(0.35, 0.1, 0.25, 1), opacity 0.45s ease;
+  transform: rotateY(0deg);
+  opacity: 1;
+}
+
+.page-date {
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+  padding-bottom: 12px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+/* ---------- 条目 ---------- */
+
+.item {
+  background: transparent;
+  padding: 14px 0;
+  border-bottom: 1px dashed var(--line);
   cursor: pointer;
 }
+
+.item:last-child { border-bottom: none; }
 
 .item-text {
   margin: 0;
@@ -82,11 +149,9 @@ body.no-scroll { overflow: hidden; }
   text-align: right;
 }
 
-/* 已保存的待办展示 */
 .item-todos {
   margin-top: 10px;
   padding-top: 8px;
-  border-top: 1px dashed var(--line);
 }
 
 .item-todo {
@@ -108,15 +173,57 @@ body.no-scroll { overflow: hidden; }
 }
 
 .empty {
-  padding: 60px 16px;
+  margin: 0;
+  padding: 4px 0;
   text-align: center;
   color: var(--muted);
   font-size: 15px;
 }
 
-.empty p { margin: 4px 0; }
+.empty-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
 
-/* 悬浮写作按钮 */
+/* ---------- 翻页控制 ---------- */
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 14px 0 10px;
+}
+
+.pager-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--accent);
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pager-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.pager-info {
+  min-width: 160px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ---------- 悬浮写作按钮 ---------- */
+
 .fab {
   position: fixed;
   right: 18px;
@@ -137,7 +244,8 @@ body.no-scroll { overflow: hidden; }
 
 .fab:active { transform: scale(0.94); }
 
-/* 全屏编辑面板 */
+/* ---------- 全屏编辑面板 ---------- */
+
 .editor {
   position: fixed;
   top: 0;

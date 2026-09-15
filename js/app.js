@@ -1,9 +1,11 @@
 /* app.js — 手机优先的碎念日记：本地存 localStorage，写段落 + 当天待办。
+   每天一页，像翻日记本一样左右翻页（滑动或箭头）。
    条目结构 { id, ts, date:'YYYY-MM-DD', time:'HH:MM', text, todos:[{id,text,done}] }。 */
 (function () {
   'use strict';
 
-  var KEY = 'suinian_entries_v1';
+  var KEY = 'suinian_entries_v2';
+  var DUR = 450; // 翻页动画时长(ms)
 
   /* ---------- 工具 ---------- */
 
@@ -39,103 +41,181 @@
 
   /* ---------- 数据 ---------- */
 
-  // 首次打开时，把 data.js 里旧收纳的 SNIPPETS 播进本地
-  function seed() {
-    if (typeof window.SNIPPETS === 'undefined' || !window.SNIPPETS.length) return [];
-    return window.SNIPPETS.map(function (s, i) {
-      return { id: 'seed-' + i, ts: i, date: s.time, time: '', text: s.text, todos: [] };
-    });
-  }
-
   function load() {
     var raw = null;
     try { raw = localStorage.getItem(KEY); } catch (e) { raw = null; }
     if (raw) {
-      try { return JSON.parse(raw); } catch (e) { return seed(); }
+      try { return JSON.parse(raw); } catch (e) { return []; }
     }
-    var entries = seed();
-    save(entries);
-    return entries;
+    return [];
   }
 
-  function save(list) {
-    try { localStorage.setItem(KEY, JSON.stringify(list)); } catch (e) {}
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(entries)); } catch (e) {}
   }
 
   var entries = load();
 
+  /* ---------- 页面状态 ---------- */
+
+  var days = [];      // [{ date, items:[...] }]，按日期从新到旧
+  var pageEls = [];
+  var current = 0;
+  var busy = false;
+
+  function buildDays() {
+    var map = {};
+    entries.forEach(function (e) {
+      (map[e.date] = map[e.date] || []).push(e);
+    });
+    return Object.keys(map).sort().reverse().map(function (d) {
+      return { date: d, items: map[d].slice().sort(function (a, b) { return b.ts - a.ts; }) };
+    });
+  }
+
   /* ---------- 渲染 ---------- */
 
-  function render() {
-    var flow = document.getElementById('flow');
-    flow.innerHTML = '';
+  function buildPage(day) {
+    var page = el('div', 'page');
+    page.appendChild(el('div', 'page-date', fmtDate(day.date)));
 
-    var sorted = entries.slice().sort(function (a, b) {
-      if (a.date !== b.date) return a.date < b.date ? -1 : 1;
-      return a.ts - b.ts;
+    day.items.forEach(function (e) {
+      var item = el('div', 'item');
+
+      if (e.text) item.appendChild(el('p', 'item-text', e.text));
+
+      if (e.todos && e.todos.length) {
+        var tl = el('div', 'item-todos');
+        e.todos.forEach(function (t) {
+          var lab = el('label', 'item-todo' + (t.done ? ' done' : ''));
+          var cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = !!t.done;
+          cb.addEventListener('click', function (ev) { ev.stopPropagation(); });
+          cb.addEventListener('change', function () {
+            t.done = cb.checked;
+            lab.classList.toggle('done', cb.checked);
+            save();
+          });
+          lab.appendChild(cb);
+          lab.appendChild(el('span', '', t.text));
+          tl.appendChild(lab);
+        });
+        item.appendChild(tl);
+      }
+
+      if (e.time) item.appendChild(el('div', 'item-time', e.time));
+
+      item.addEventListener('click', function () { openEditor(e); });
+      page.appendChild(item);
     });
 
-    if (!sorted.length) {
-      var empty = el('div', 'empty');
-      empty.appendChild(el('p', '', '还没有记录。'));
-      empty.appendChild(el('p', '', '点右下角的 ＋ 写今天的第一条。'));
-      flow.appendChild(empty);
-      document.getElementById('count').textContent = '还没有记录';
-      return;
+    return page;
+  }
+
+  function renderPages() {
+    var box = document.getElementById('pages');
+    box.innerHTML = '';
+    pageEls = [];
+
+    if (!days.length) {
+      var emptyPage = el('div', 'page empty-page');
+      emptyPage.appendChild(el('p', 'empty', '还没有记录。'));
+      emptyPage.appendChild(el('p', 'empty', '点右下角的 ＋ 写今天的第一条。'));
+      box.appendChild(emptyPage);
+      pageEls.push(emptyPage);
+    } else {
+      days.forEach(function (day) {
+        var p = buildPage(day);
+        box.appendChild(p);
+        pageEls.push(p);
+      });
     }
 
-    var groups = [];
-    sorted.forEach(function (e) {
-      var last = groups[groups.length - 1];
-      if (!last || last.date !== e.date) { last = { date: e.date, items: [] }; groups.push(last); }
-      last.items.push(e);
+    setActive(current);
+  }
+
+  function setActive(i) {
+    pageEls.forEach(function (p, k) {
+      p.classList.remove('turn-out', 'turn-in', 'turn-in-from', 'below');
+      p.classList.toggle('active', k === i);
     });
+  }
 
-    groups.forEach(function (g) {
-      var day = el('div', 'day');
-      day.appendChild(el('div', 'day-label', fmtDate(g.date)));
+  function updatePager() {
+    var info = document.getElementById('pager-info');
+    var prev = document.getElementById('prev-btn');
+    var next = document.getElementById('next-btn');
+    if (!days.length) {
+      info.textContent = '';
+      prev.disabled = true;
+      next.disabled = true;
+      return;
+    }
+    info.textContent = fmtDate(days[current].date) + ' · ' + (current + 1) + '/' + days.length;
+    prev.disabled = current === 0;
+    next.disabled = current === days.length - 1;
+  }
 
-      g.items.forEach(function (e) {
-        var item = el('div', 'item');
+  function updateCount() {
+    document.getElementById('count').textContent =
+      '共 ' + days.length + ' 天 · ' + entries.length + ' 条';
+  }
 
-        if (e.text) item.appendChild(el('p', 'item-text', e.text));
+  function render(focusDate) {
+    days = buildDays();
+    current = 0;
+    renderPages();
+    if (focusDate) jumpToDate(focusDate);
+    else updatePager();
+    updateCount();
+  }
 
-        if (e.todos && e.todos.length) {
-          var tl = el('div', 'item-todos');
-          e.todos.forEach(function (t) {
-            var lab = el('label', 'item-todo' + (t.done ? ' done' : ''));
-            var cb = document.createElement('input');
-            cb.type = 'checkbox';
-            cb.checked = !!t.done;
-            cb.addEventListener('click', function (ev) { ev.stopPropagation(); });
-            cb.addEventListener('change', function () {
-              t.done = cb.checked;
-              save(entries);
-              render();
-            });
-            lab.appendChild(cb);
-            lab.appendChild(el('span', '', t.text));
-            tl.appendChild(lab);
-          });
-          item.appendChild(tl);
-        }
+  /* ---------- 翻页 ---------- */
 
-        if (e.time) item.appendChild(el('div', 'item-time', e.time));
+  function flipTo(next) {
+    if (busy || !days.length) return;
+    if (next < 0 || next >= days.length || next === current) return;
 
-        item.addEventListener('click', function () { openEditor(e); });
-        day.appendChild(item);
-      });
+    var forward = next > current; // 往更早翻
+    var out = pageEls[current];
+    var inn = pageEls[next];
+    busy = true;
+    current = next;
+    updatePager();
 
-      flow.appendChild(day);
-    });
+    out.classList.remove('active');
+    inn.classList.remove('active', 'below', 'turn-in', 'turn-in-from', 'turn-out');
 
-    document.getElementById('count').textContent = '共 ' + entries.length + ' 条';
+    if (forward) {
+      out.classList.add('turn-out');
+      inn.classList.add('below');
+    } else {
+      out.classList.add('below');
+      inn.classList.add('turn-in-from');
+      void inn.offsetWidth; // 强制重排，让起始状态生效
+      inn.classList.remove('turn-in-from');
+      inn.classList.add('turn-in');
+    }
+
+    setTimeout(function () {
+      setActive(current);
+      busy = false;
+    }, DUR);
+  }
+
+  function jumpToDate(dateStr) {
+    var idx = days.findIndex(function (d) { return d.date === dateStr; });
+    if (idx < 0) idx = 0;
+    current = idx;
+    setActive(current);
+    updatePager();
   }
 
   /* ---------- 编辑器 ---------- */
 
-  var editingId = null;      // null = 新建
-  var editorTodos = [];      // 编辑中的待办副本
+  var editingId = null;   // null = 新建
+  var editorTodos = [];   // 编辑中的待办副本
 
   function openEditor(entry) {
     editingId = entry ? entry.id : null;
@@ -231,16 +311,16 @@
       entries.push({ id: uid(), ts: Date.now(), date: date, time: nowTime(), text: text, todos: todos });
     }
 
-    save(entries);
+    save();
     closeEditor();
-    render();
+    render(date); // 回到刚写的那一页
   }
 
   function deleteEntry() {
     if (!editingId) return;
     if (!confirm('删除这条记录？')) return;
     entries = entries.filter(function (x) { return x.id !== editingId; });
-    save(entries);
+    save();
     closeEditor();
     render();
   }
@@ -255,6 +335,28 @@
   document.getElementById('todo-input').addEventListener('keydown', function (ev) {
     if (ev.key === 'Enter') { ev.preventDefault(); addTodo(); }
   });
+
+  document.getElementById('prev-btn').addEventListener('click', function () { flipTo(current - 1); });
+  document.getElementById('next-btn').addEventListener('click', function () { flipTo(current + 1); });
+
+  // 左右滑动翻页
+  var stage = document.getElementById('stage');
+  var touchX = null, touchY = null;
+  stage.addEventListener('touchstart', function (ev) {
+    if (ev.touches.length !== 1) return;
+    touchX = ev.touches[0].clientX;
+    touchY = ev.touches[0].clientY;
+  }, { passive: true });
+  stage.addEventListener('touchend', function (ev) {
+    if (touchX == null) return;
+    var dx = ev.changedTouches[0].clientX - touchX;
+    var dy = ev.changedTouches[0].clientY - touchY;
+    touchX = touchY = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0) flipTo(current + 1); // 左滑 → 更早
+      else flipTo(current - 1);        // 右滑 → 更新
+    }
+  }, { passive: true });
 
   render();
 })();
